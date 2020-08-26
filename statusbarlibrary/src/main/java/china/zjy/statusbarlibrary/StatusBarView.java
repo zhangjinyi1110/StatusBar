@@ -3,7 +3,7 @@ package china.zjy.statusbarlibrary;
 import android.content.Context;
 import android.view.View;
 
-public class StatusBarView extends View {
+final class StatusBarView extends View {
 
     private int height;
 

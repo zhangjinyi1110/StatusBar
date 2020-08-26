@@ -29,7 +29,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 BarHelper.with(this).setStatusBackgroundColor(Color.parseColor("#333333"));
                 break;
             case R.id.btn2:
-                BarHelper.with(this).setStatusBackgroundDrawable(getResources().getDrawable(R.drawable.ic_launcher_foreground));
+                BarHelper.with(this).setStatusBackgroundDrawable(getResources().getDrawable(R.drawable.status_bg));
                 break;
             case R.id.btn4:
                 BarHelper.with(this).hideStatusBar();
@@ -44,6 +44,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 BarHelper.with(this).darkColor();
                 break;
             case R.id.btn9:
+//                getWindow().setStatusBarColor(Color.TRANSPARENT);
                 BarHelper.with(this).showStatusBar();
                 break;
         }

@@ -11,7 +11,11 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.LinearLayout;
 
-public class StatusBar extends LinearLayout implements Bar {
+final class StatusBar extends LinearLayout implements Bar {
+
+    private final int STATUS_VISIBILITY = 0;//显示状态栏,显示状态栏文字图标
+    private final int STATUS_INVISIBILITY = 1;//隐藏状态栏,显示状态栏文字图标
+    private final int STATUS_GONE = 2;//隐藏状态栏,隐藏状态栏文字图标
 
     private Activity activity;
 
@@ -21,9 +25,9 @@ public class StatusBar extends LinearLayout implements Bar {
 
     private boolean lightStyle = false;//是否是亮色主题，即是否要设置成字体为黑色
 
-    private boolean hideStatusBar = false;//是否隐藏状态栏
+    private int barStatus = STATUS_VISIBILITY;
 
-    private boolean hideHalfStatusBar = false;//是否隐藏状态栏但是现实状态栏的文字图标等
+    private int visibility;
 
     StatusBar(Context context) {
         super(context);
@@ -33,15 +37,45 @@ public class StatusBar extends LinearLayout implements Bar {
 
     private void init() {
         setOrientation(VERTICAL);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            initLollipop();
+        }
+        decorView.setOnSystemUiVisibilityChangeListener(new OnSystemUiVisibilityChangeListener() {
+            @Override
+            public void onSystemUiVisibilityChange(int visibility) {
+                if (visibility == 0 && barStatus == STATUS_GONE) {
+                    hideHalfStatusBar();
+                    postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            hideStatusBar();
+                        }
+                    }, 2000);
+                }
+            }
+        });
+    }
+
+    /**
+     * api 21 以上
+     */
+    private void initLollipop() {
         decorView = activity.getWindow().getDecorView();
         ViewGroup contentView = decorView.findViewById(Window.ID_ANDROID_CONTENT);
         if (contentView.getChildCount() > 0) {
             View content = contentView.getChildAt(0);
-            contentView.removeView(content);
-            this.addView(content);
-            contentView.addView(this, 0);
+            if (!(content instanceof StatusBar)) {
+                contentView.removeView(content);
+                this.addView(content);
+                contentView.addView(this, 0);
+            }
+            if (!(getChildAt(0) instanceof StatusBarView)) {
+                statusBarView = new StatusBarView(activity);
+                this.addView(statusBarView, 0);
+                showStatusBar();
+                activity.getWindow().setStatusBarColor(Color.TRANSPARENT);
+            }
         }
-        statusBarView = new StatusBarView(activity);
     }
 
     @Override
@@ -51,74 +85,69 @@ public class StatusBar extends LinearLayout implements Bar {
 
     @Override
     public Bar setStatusBackgroundColor(@ColorInt int color) {
-        hideStatusBar = false;
-        hideHalfStatusBar = false;
-        initStatusBar();
         statusBarView.setBackgroundColor(color);
         return this;
     }
 
     @Override
     public Bar setStatusBackgroundDrawable(Drawable drawable) {
-        hideStatusBar = false;
-        hideHalfStatusBar = false;
-        initStatusBar();
         statusBarView.setBackground(drawable);
         return this;
     }
 
     @Override
     public Bar hideStatusBar() {
-        hideStatusBar = true;
-        hideHalfStatusBar = true;
-        initStatusBar();
+        barStatus = STATUS_GONE;
+        statusBarView.setVisibility(GONE);
+        visibility = View.SYSTEM_UI_FLAG_FULLSCREEN;
+        switchColor();
         return this;
     }
 
     @Override
     public Bar showStatusBar() {
-        hideStatusBar = false;
-        hideHalfStatusBar = false;
-        initStatusBar();
+        barStatus = STATUS_VISIBILITY;
+        statusBarView.setVisibility(VISIBLE);
+        visibility = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
+        switchColor();
         return this;
     }
 
     @Override
     public Bar hideHalfStatusBar() {
-        hideStatusBar = false;
-        hideHalfStatusBar = true;
-        initStatusBar();
+        barStatus = STATUS_INVISIBILITY;
+        statusBarView.setVisibility(GONE);
+        visibility = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
+        switchColor();
         return this;
     }
 
     @Override
     public Bar lightColor() {
-        lightStyle = true;
-        initStatusBar();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            lightStyle = true;
+            visibility |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        }
+        decorView.setSystemUiVisibility(visibility);
         return this;
     }
 
     @Override
     public Bar darkColor() {
-        lightStyle = false;
-        initStatusBar();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            lightStyle = false;
+            visibility = (visibility & ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+        }
+        decorView.setSystemUiVisibility(visibility);
         return this;
     }
 
-    private void initStatusBar() {
-        statusBarView.setVisibility(hideHalfStatusBar ? GONE : VISIBLE);
-        if (getChildAt(0) != statusBarView) {
-            this.addView(statusBarView, 0);
+    private void switchColor() {
+        if (lightStyle) {
+            lightColor();
+        } else {
+            darkColor();
         }
-        int visibility = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
-        if (lightStyle && Build.VERSION_CODES.M <= Build.VERSION.SDK_INT) {
-            visibility |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-        }
-        if (hideStatusBar) {
-            visibility |= SYSTEM_UI_FLAG_FULLSCREEN;
-        }
-        decorView.setSystemUiVisibility(visibility);
-        activity.getWindow().setStatusBarColor(Color.TRANSPARENT);
     }
 
 }
